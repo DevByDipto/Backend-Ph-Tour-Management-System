@@ -1,0 +1,310 @@
+------------------------------------------------1.
+১. app.listen()
+
+এটা Express.js method, যা Node.js HTTP server তৈরি করে এবং নির্দিষ্ট port-এ লিসেন করতে শুরু করে।
+
+সাধারণভাবে লিখি:
+
+app.listen(port, callback)
+
+
+callback তখন execute হয় যখন সার্ভার সফলভাবে শুরু হয়ে গেছে।
+
+২. server
+server = app.listen(port, () => { ... })
+
+
+এখানে server হলো Node.js HTTP server object।
+
+অর্থাৎ, app.listen() এই server object কে return করে, যা আমরা server নামের variable-এ ধরে রাখছি।
+
+এই object দিয়ে পরে আমরা অনেক কাজ করতে পারি, যেমন:
+
+server.close() → সার্ভার বন্ধ করা
+
+server.address() → কোন port এ লিসেন করছে সেটা জানা
+
+অন্যান্য low-level Node.js server operations
+
+সংক্ষেপে
+
+app.listen() → সার্ভার চালু করে এবং HTTP server object return করে।
+
+server → সেই returned object।
+------------------------------------------------------2
+১. server.close()
+
+এটা Node.js এর HTTP server method।
+
+কাজ:
+
+নতুন request আর গ্রহণ করবে না।
+
+চলমান সব request শেষ হওয়া পর্যন্ত অপেক্ষা করবে।
+
+অর্থাৎ, সার্ভার gracefully বন্ধ হওয়ার প্রক্রিয়া শুরু করে।
+
+২. Callback () => { process.exit(1) }
+
+যখন সব চলমান request শেষ হয়ে যায় এবং server সম্পূর্ণ বন্ধ হয়ে যায়, তখন এই callback execute হয়।
+
+process.exit(1) এর কাজ: Node process কে exit code 1 দিয়ে বন্ধ করা।
+
+1 সাধারণত signal করে error বা abnormal shutdown।
+
+0 হলে normal shutdown।
+
+সংক্ষেপে flow
+
+unhandled promise rejection ধরল।
+
+console.log দেখাবে warning।
+
+server.close() নতুন connection বন্ধ করবে, চলমানগুলো শেষ করবে।
+
+সব শেষ হলে callback চলবে।
+
+process.exit(1) সার্ভার ও Node process বন্ধ করবে।
+--------------------
+process.exit(1) kii kore bujinai??
+
+process.exit(1) হলো Node.js-এর process control function। ধাপে ধাপে বুঝাই:
+
+1️⃣ process.exit() কি?
+
+process.exit() Node.js process immediately terminate করে।
+
+মানে, যে Node.js program চলছিল, তা তৎক্ষণাৎ বন্ধ হয়ে যাবে।
+
+2️⃣ Argument এর মান (0, 1, বা অন্য কোনো number)
+
+0 → successful exit (কোনো error ছাড়া শেষ)
+
+1 → failure exit (কোনো error বা exception-এর কারণে বন্ধ)
+
+সাধারণভাবে:
+
+process.exit(0); // ঠিকঠাক শেষ হয়ে গেছে
+process.exit(1); // কোনো error-এর কারণে বন্ধ
+
+3️⃣ Practical use
+
+তুমি যেমন দেখেছো:
+
+server.close(() => {
+    process.exit(1);
+});
+
+
+server.close() → সার্ভারের সকল connection gracefully বন্ধ করে।
+
+তারপর process.exit(1) → Node.js process কে exit code 1 সহ বন্ধ করে, যা বোঝায়: “error-এর কারণে সার্ভার বন্ধ হয়েছে।”
+
+সংক্ষেপে:
+process.exit(1) বলছে: “Node.js process এখনই বন্ধ করো এবং exit code 1 দিয়ে signal দাও যে এটা error-এর কারণে বন্ধ।”
+------------
+ server.close ar process.exit er moddhe parthokko kii ?
+
+
+ --------------
+ node js process ar node js server er moddhe parthokko kii ? ke age bondho hoi ?
+ChatGPT said:
+
+Node.js এর context এ process আর server দুইটাই আলাদা, কিন্তু সম্পর্কিত। পার্থক্যগুলো সংক্ষেপে:
+
+1️⃣ Node.js Server
+
+উদাহরণ: const server = app.listen(port)
+
+এটা একটি HTTP server।
+
+মূল কাজ: client থেকে request গ্রহণ করা ও response পাঠানো।
+
+এটি Node.js process এর একটি অংশ, অর্থাৎ server বন্ধ হলেও process চালু থাকতে পারে যদি অন্য কাজ থাকে।
+
+Server বন্ধ করার জন্য server.close() ব্যবহার করা হয়।
+
+2️⃣ Node.js Process
+
+Node.js এর runtime environment, যেখানে আপনার app চালায়।
+
+process এর মধ্যে server, database connections, timers, event loop সবকিছু থাকে।
+
+Process বন্ধ করার জন্য process.exit() ব্যবহার করা হয়।
+
+Process বন্ধ হলে server, database connection, background tasks—সবই বন্ধ হয়ে যায়।
+
+কে আগে বন্ধ হয়?
+
+সাধারণত graceful shutdown এ:
+1️⃣ প্রথমে server.close() → active requests শেষ করে, নতুন request নিতে বন্ধ।
+2️⃣ তারপর process.exit() → পুরো Node.js process বন্ধ করে দেয়।
+
+কারণ: যদি process আগে বন্ধ হয়, server এর active requests ও connections তৎক্ষণাৎ terminate হয়ে যাবে। তাই graceful shutdown এর ক্ষেত্রে server প্রথমে, process পরে।
+
+--------------
+1️⃣ server.close()
+
+এটা Node.js server এর উপর কাজ করে।
+
+মূল কাজ: সার্ভারের active connections শেষ হওয়ার পর বন্ধ করা।
+
+Graceful shutdown করে: নতুন কোনো request গ্রহণ করে না, কিন্তু চলমান requests শেষ হতে দেয়।
+
+Server বন্ধ হলেও Node.js process চলতে থাকে, অন্য কোনো কাজ বা event loop চালু থাকলে।
+
+Example:
+
+server.close(() => {
+  console.log("Server closed gracefully.");
+});
+
+2️⃣ process.exit()
+
+এটা পুরো Node.js process কে বন্ধ করে দেয়।
+
+যে কোনো চলমান কাজ বা open connection immediately terminate হয়ে যায়।
+
+Exit code (0 = success, 1 = error) দিতে পারা যায়।
+
+Example:
+
+process.exit(1); // Exit code 1 দিয়ে process বন্ধ
+
+সংক্ষেপে
+Function	কি করে	কি বন্ধ হয়
+server.close()	সার্ভারের active connections gracefully শেষ করে	শুধু server, Node.js process চলতে থাকে
+process.exit()	Node.js process তৎক্ষণাৎ বন্ধ করে	সব কিছু বন্ধ হয়ে যায়, server সহ
+
+-------------
+tahole process ba run time ta on hoi kokhon ar tate thaka server ta o on hoi kokhon ?
+
+ChatGPT said:
+
+ঠিক ধরেছেন, এইটা বোঝা গুরুত্বপূর্ণ। সংক্ষেপে:
+
+1️⃣ Process (Node.js runtime) কখন on হয়?
+
+যখন আপনি node app.js বা npm start দিয়ে আপনার অ্যাপ চালান।
+
+তখন Node.js একটি process তৈরি করে, যা আপনার কোড execute করে।
+
+এই process এর মধ্যে event loop, memory, timers, modules, server connections সব থাকে।
+
+2️⃣ Server কখন on হয়?
+
+Server তখনই চালু হয় যখন আপনি app.listen(port) কল করেন।
+
+এই মুহূর্তে Node.js process এর event loop active থাকে এবং server HTTP requests গ্রহণ করার জন্য ready।
+
+অর্থাৎ server হল process এর একটি অংশ, কিন্তু process থাকতে হবে server চালু করার জন্য।
+
+Flow
+
+Node.js process তৈরি হয় → কোড চালু হয়।
+
+আপনার কোডে app.listen(port) এলে server start হয়।
+
+এখন server request নিতে পারে যতক্ষণ process চলবে।
+
+server.close() → server বন্ধ হবে, কিন্তু process চলতে পারে।
+
+---------------------------------------------------------------------------3
+callback না দিলে process.exit() আগে execute হয়ে যায়, আর server.close-এর ভেতরে ঢোকার সুযোগই পায় না।
+
+Demo 1: Callback ব্যবহার করা
+const server = {
+  close: (callback) => {
+    console.log("server.close called");
+    callback();
+  }
+}
+
+server.close(() => {
+  console.log("Callback running...");
+  process.exit(1);
+});
+
+
+👉 Output হবে:
+
+server.close called
+Callback running...
+
+
+তারপর process exit হয়ে যাবে।
+মানে server.close এর ভেতরে code execute হলো, তারপর callback হলো, তারপর exit।
+
+Demo 2: সরাসরি process.exit(1) দেওয়া
+const server = {
+  close: (callback) => {
+    console.log("server.close called");
+    callback();
+  }
+}
+
+// এখানে callback function না দিয়ে সরাসরি process.exit(1) কল করছি
+server.close(process.exit(1));
+
+
+👉 Flow:
+
+server.close(...) কল করার সময় JS প্রথমে argument evaluate করবে।
+
+Argument হিসেবে তুমি লিখেছো process.exit(1) → এটা সাথে সাথে run হয়ে যাবে।
+
+process.exit(1) program terminate করে ফেলবে → তাই server.close function এর ভেতরে ঢোকার সুযোগই পাবে না।
+
+➡️ Output হবে শুধু:
+
+(exit code 1, no logs)
+
+
+মানে console.log("server.close called") আর কখনোই execute হবে না, কারণ program আগে terminate হয়ে গেছে।
+
+সারসংক্ষেপ
+
+Callback দিলে → function body execute হবে → তারপর callback → তারপর exit।
+
+সরাসরি দিলে → process.exit(1) সাথে সাথেই program terminate করে ফেলবে → তাই function body (server.close called) আর execute হবে না।
+
+--------------------------------------------------------------------------------4
+আহা দারুণ observation! 👍
+তুমি একদম ঠিক ধরেছো — ওই কোডের মানে হলো:
+
+if (server) {
+  server.close(() => process.exit(1));
+}
+process.exit(1); // server না থাকলেও process.exit করে দাও
+
+
+মানে, server object define করা থাকলে graceful shutdown হবে, আর যদি server চালু না থাকে, তাহলেও process exit করবে।
+
+🔎 এখন আসল প্রশ্ন:
+
+👉 “server চালু না থাকা অবস্থায়ও process চলতে পারে — এমন সিনারিও কবে ঘটে?”
+
+১. Non-server Node.js Application
+
+Node.js শুধু server বানানোর জন্যই নয়। তুমি server ছাড়াও script লিখতে পারো:
+
+// example.js
+console.log("Hello World");
+
+
+এখানে কোনো server.listen নেই, কিন্তু process চলছে (এবং কাজ শেষে exit হচ্ছে)।
+
+২. Background Jobs বা Worker Process
+
+ধরো তুমি একটা job queue প্রসেসর লিখেছো (server ছাড়াই):
+
+setInterval(() => {
+  console.log("Checking queue...");
+}, 1000);
+
+
+এখানে কোনো HTTP server নেই। তবুও Node.js process সবসময় চালু থাকবে, কারণ event loop এ কাজ আছে।
+
+৩. CLI Tools (Command Line Interface)
+
+যেমন npm, npx, tsc এগুলো সব Node.js এ লেখা। এদের মধ্যে server চালু হয় না, তবুও process execute করে কাজ শেষ করে exit হয়।
