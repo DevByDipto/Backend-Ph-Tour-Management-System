@@ -308,3 +308,450 @@ setInterval(() => {
 ৩. CLI Tools (Command Line Interface)
 
 যেমন npm, npx, tsc এগুলো সব Node.js এ লেখা। এদের মধ্যে server চালু হয় না, তবুও process execute করে কাজ শেষ করে exit হয়।
+--------------------------------------------------------------------------------5
+১️⃣ Schema তে generic IUser
+const userSchema = new Schema<IUser>({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+});
+
+
+এখানে Schema<IUser> মানে: এই schema অনুযায়ী document এর shape হবে IUser।
+
+TypeScript জানে, schema এর ভিতরের structure কেমন হবে।
+
+✅ কিন্তু শুধু schema তে generic দেওয়া পুরো type safety নিশ্চিত করে না model এর methods এ।
+
+২️⃣ Model তে generic IUser
+export const User = model<IUser>("User", userSchema);
+
+
+Mongoose model এ অনেক method আছে: create(), findOne(), find(), updateOne() ইত্যাদি।
+
+Generic দিলে TypeScript জানে model এর সব methods return type কি হবে।
+
+উদাহরণ:
+
+const user = await User.findOne({ email: "abc@example.com" });
+user?.name; // ✅ TypeScript জানে name string
+user?.email; // ✅ TypeScript জানে email string
+
+
+যদি generic না দিতেন:
+
+const User = model("User", userSchema);
+const user = await User.findOne({ email: "abc@example.com" });
+// user এর type হবে Document<any, any>, TypeScript জানবে না field name/email
+
+৩️⃣ সংক্ষেপে
+জায়গা	Generic এর কাজ
+Schema	Schema এর field structure define করে
+Model	Model methods এর return type/type checking নিশ্চিত করে
+
+Schema তে generic = field validation
+
+Model তে generic = method return type/type safety
+
+arthath model e Iuser use korar mane holo model er bivinno methode jaa retune korbe se retune type kii hobe
+
+--------------------------------------------------------------------------------6
+bivinno pathe redirect korte shahajjo kore j jinis take route boli.
+Express এ Router() হচ্ছে একটা mini router / sub-application — যেটা দিয়ে তুমি বিভিন্ন path এর জন্য আলাদা আলাদা handler define করতে পারো।
+
+📌 Route মানে কী?
+
+Route = HTTP method + Path + Handler এর combination।
+
+উদাহরণ:
+
+router.post("/register", userControllers.createUser);
+router.get("/profile", userControllers.getProfile);
+
+
+এখানে:
+
+/register → একটা route (POST request handle করছে)
+
+/profile → আরেকটা route (GET request handle করছে)
+
+📌 তাহলে Router() কী?
+
+Router() = Express এর একটা class, যেটা দিয়ে তুমি group of routes বানাতে পারো।
+
+পরে এই router কে app.use() দিয়ে main app এ connect করো।
+
+// user.route.ts
+import { Router } from "express";
+const router = Router();
+
+router.post("/register", userControllers.createUser);
+router.get("/profile", userControllers.getProfile);
+
+export const userRoute = router;
+
+// app.ts
+import express from "express";
+import { userRoute } from "./user.route";
+
+const app = express();
+
+// এখানে /users prefix দিয়ে সব userRoute এর path কাজ করবে
+app.use("/users", userRoute);
+
+
+এখন:
+
+POST /users/register → যাবে createUser এ
+
+GET /users/profile → যাবে getProfile এ
+
+✅ সংক্ষেপে:
+
+Route = নির্দিষ্ট path + HTTP method + handler
+
+Router() = একাধিক route কে একসাথে manage করার জন্য Express এর sub-router
+
+-----------------------------------------------------------------------------------7
+🔹 ১) সাধারণ ভাষায়
+
+Express এ .use() মানে হলো "attach করা / লাগানো"।
+মানে তুমি middleware বা router কে কোনো path এ mount করছো।
+
+🔹 ২) app.use()
+
+app = পুরো Express application instance।
+
+app.use() মানে হলো পুরো app এ একটা middleware বা router attach করা।
+
+উদাহরণ:
+
+// Global middleware
+app.use(express.json());  
+// Router mount
+app.use("/users", userRoute);
+
+
+👉 এখানে express.json() middleware সব request এ run হবে।
+👉 /users দিয়ে শুরু হওয়া সব request যাবে userRoute এর মধ্যে।
+
+🔹 ৩) router.use()
+
+router = ছোট একটা sub-router (যা তুমি Router() দিয়ে বানাও)।
+
+router.use() মানে হলো সেই ছোট router এর ভেতরে অন্য middleware/router attach করা।
+
+উদাহরণ:
+
+const router = Router();
+
+// এই middleware শুধু user router এর মধ্যে কাজ করবে
+router.use((req, res, next) => {
+  console.log("User router এর মধ্যে ঢুকছে");
+  next();
+});
+
+router.post("/register", userControllers.createUser);
+router.get("/profile", userControllers.getProfile);
+
+🔹 ৪) সংক্ষেপে পার্থক্য
+
+app.use() → পুরো Express application এ middleware/router attach করে।
+
+router.use() → শুধু ওই sub-router এর ভেতরে middleware/router attach করে।
+
+✅ তাই use মানে হলো attach / mount করা →
+যেটা global app level এ করলে app.use(),
+আর router level এ করলে router.use()।
+-----------------------------------------------------------------------------------8
+
+১️⃣ public কী?
+
+TypeScript-এ class property বা method-এর access modifier তিন ধরনের হয়:
+
+public → class এর বাইরে থেকেও access করা যাবে
+
+private → শুধুমাত্র class-এর ভিতর থেকে access করা যাবে
+
+protected → class-এর ভিতর ও subclasses থেকে access করা যাবে
+
+উদাহরণ:
+
+class Person {
+    public name: string;
+    private age: number;
+    protected job: string;
+
+    constructor(name: string, age: number, job: string) {
+        this.name = name;
+        this.age = age;
+        this.job = job;
+    }
+}
+
+const p = new Person("Dipto", 25, "Developer");
+console.log(p.name);   // ✅ কাজ করবে
+console.log(p.age);    // ❌ error, private
+console.log(p.job);    // ❌ error, protected
+
+২️⃣ public লিখলে কী সুবিধা?
+
+Explicit declaration
+
+public লিখলে বোঝানো হয়: এই property সবাই access করতে পারবে।
+
+যদিও TypeScript-এ default public, explicit লেখা readability বাড়ায়।
+
+Subclass/instance থেকে direct access
+
+যেকোন instance বা subclass থেকে সরাসরি access করতে পারবে।
+
+৩️⃣ আপনার উদাহরণে
+class AppError extends Error {
+    public statusCode: number;
+
+    constructor(statusCode: number, message: string) {
+        super(message);
+        this.statusCode = statusCode;
+    }
+}
+
+const err = new AppError(404, "Not Found");
+console.log(err.statusCode);  // ✅ public এর কারণে বাইরে থেকেও access
+
+
+যদি statusCode private হতো, তাহলে এই console.log error দিত।
+
+৪️⃣ সংক্ষেপে
+
+public → যেকোন জায়গা থেকে access করা যাবে
+
+private → শুধু class ভিতরে accessable
+
+protected → class + subclass ভিতরে accessable
+
+TypeScript default এ property public, কিন্তু explicit লিখলে code পড়তে সহজ হয়।
+
+
+You said:
+private,protected  er akta kore udhaharon daw
+ChatGPT said:
+
+ঠিক আছে, আমি private আর protected–এর জন্য step-by-step উদাহরণ দেখাই।
+
+১️⃣ Private উদাহরণ
+
+private মানে: শুধু class-এর ভিতরে accessable, বাইরে বা subclass থেকে access করা যাবে না।
+
+class BankAccount {
+    private balance: number;
+
+    constructor(initialBalance: number) {
+        this.balance = initialBalance;
+    }
+
+    deposit(amount: number) {
+        this.balance += amount;
+        console.log(`Deposited: ${amount}, New Balance: ${this.balance}`);
+    }
+
+    getBalance() {
+        return this.balance;
+    }
+}
+
+const account = new BankAccount(1000);
+account.deposit(500);            // ✅ Deposited: 500, New Balance: 1500
+console.log(account.getBalance());// ✅ 1500
+console.log(account.balance);    // ❌ Error: Property 'balance' is private
+
+
+ব্যাখ্যা:
+
+balance শুধু class ভিতর থেকে পরিবর্তন/পড়া যায়।
+
+class এর বাইরে সরাসরি access করা যাবে না।
+
+২️⃣ Protected উদাহরণ
+
+protected মানে: class + subclass ভিতরে accessable, কিন্তু class-এর বাইরে access করা যাবে না।
+
+class Employee {
+    protected salary: number;
+
+    constructor(salary: number) {
+        this.salary = salary;
+    }
+}
+
+class Manager extends Employee {
+    bonus: number;
+
+    constructor(salary: number, bonus: number) {
+        super(salary);
+        this.bonus = bonus;
+    }
+
+    getTotalCompensation() {
+        return this.salary + this.bonus; // ✅ Protected তাই subclass থেকে access possible
+    }
+}
+
+const m = new Manager(50000, 10000);
+console.log(m.getTotalCompensation()); // ✅ 60000
+console.log(m.salary);                  // ❌ Error: Property 'salary' is protected
+
+
+ব্যাখ্যা:
+
+salary subclass থেকে accessable → Manager class
+
+কিন্তু class এর বাইরে সরাসরি access করা যাবে না
+
+✅ Summary Table
+Modifier	Accessability
+public	class + subclass + instance
+private	class only
+protected	class + subclass
+-----------------------------------------------------------------------------------9
+১️⃣ Error.captureStackTrace কি?
+
+এটা Node.js এর built-in method, যা custom error class তৈরি করার সময় stack trace generate করতে সাহায্য করে।
+
+সাধারণ Error object তৈরি করলে Node নিজের default stack trace generate করে, কিন্তু captureStackTrace দিয়ে তুমি stack trace কে কাস্টমাইজ করতে পারো।
+
+২️⃣ Syntax
+Error.captureStackTrace(targetObject, constructorOpt?)
+
+
+targetObject → যে object-এর stack trace attach করতে চাও (সাধারণত this)
+
+constructorOpt (optional) → কোন constructor থেকে stack trace শুরু হবে, এটা দিলে constructor call কে trace থেকে বাদ দেয়।
+
+৩️⃣ উদাহরণ
+class AppError extends Error {
+    constructor(message: string) {
+        super(message);
+        // clean stack trace
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+function testError() {
+    throw new AppError("Something went wrong!");
+}
+
+testError();
+
+
+Error.captureStackTrace(this, this.constructor) না দিলে stack trace শুরু হবে Error class থেকে → কিছু extra noise।
+
+দিলে stack trace শুধু AppError কে বাদ দিয়ে দেখাবে কোথায় কোথায় এই error আসছে → cleaner debugging।
+
+৪️⃣ Output (stack trace)
+AppError: Something went wrong!
+    at testError (/path/to/file.ts:12:11)
+    at Object.<anonymous> (/path/to/file.ts:15:1)
+    at Module._compile (internal/modules/cjs/loader.js:...)
+    ...
+
+
+দেখতে পাচ্ছো Error.captureStackTrace এর কারণে শুধু relevant code location দেখাচ্ছে।
+
+৫️⃣ সংক্ষেপে
+
+মূল উদ্দেশ্য: custom error class এ clean stack trace attach করা
+
+this.constructor দিলে constructor call trace থেকে বাদ যায়
+
+ডেভেলপমেন্টে debug করা সহজ হয়
+
+চাও আমি একটি comparison example দেখাই যেখানে:
+
+captureStackTrace ব্যবহার করা হয়েছে
+
+ব্যবহার করা হয়নি
+
+এতে তুমি স্পষ্টভাবে দেখতে পাবে কতো clean vs noisy stack trace হয়।
+
+চাও আমি দেখাই?
+
+You said:
+constructorOpt (optional) → কোন constructor থেকে stack trace শুরু হবে, এটা দিলে constructor call কে trace থেকে বাদ দেয়।
+দিলে stack trace শুধু AppError কে বাদ দিয়ে দেখাবে কোথায় কোথায় এই error আসছে → cleaner debugging।
+
+aii duita line er mane buji nai
+ChatGPT said:
+
+ঠিক আছে, আমি সহজভাবে step by step ব্যাখ্যা করি।
+
+১️⃣ constructorOpt মানে কী?
+
+Error.captureStackTrace(targetObject, constructorOpt) এর দ্বিতীয় argument হলো constructorOpt।
+
+এটাকে constructor function হিসেবে দিলে, stack trace সেখানে থামানো হয় বা ওর আগে অংশ বাদ দেওয়া হয়।
+
+সাধারণভাবে:
+
+Error.captureStackTrace(this, this.constructor);
+
+
+এখানে this.constructor হলো আমাদের custom error class → যেমন AppError
+
+এর মানে হলো stack trace শুরু হবে AppError class-এর বাইরে থেকে, অর্থাৎ যেখানে error আসলেই trigger হয়েছে।
+
+২️⃣ Example
+(ক) captureStackTrace ছাড়া
+class AppError extends Error {
+    constructor(message: string) {
+        super(message);
+    }
+}
+
+function test() {
+    throw new AppError("Something went wrong!");
+}
+
+test();
+
+
+Output stack trace:
+
+Error: Something went wrong!
+    at new AppError (file.ts:2:9)
+    at test (file.ts:7:11)
+    at Object.<anonymous> (file.ts:10:1)
+
+
+লক্ষ্য করো, trace শুরু হয়েছে AppError constructor থেকে → এটি developer জন্য অপ্রয়োজনীয় noise।
+
+(খ) captureStackTrace ব্যবহার করলে
+class AppError extends Error {
+    constructor(message: string) {
+        super(message);
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+function test() {
+    throw new AppError("Something went wrong!");
+}
+
+test();
+
+
+Output stack trace:
+
+AppError: Something went wrong!
+    at test (file.ts:7:11)
+    at Object.<anonymous> (file.ts:10:1)
+
+
+লক্ষ্য করো, AppError constructor trace বাদ গেছে → এখন শুধু কোডে কোথায় error এসেছে সেটাই দেখা যাচ্ছে।
+
+৩️⃣ সারসংক্ষেপ
+
+constructorOpt দিলে stack trace cleaner হয়।
+
+Stack trace-এ শুধু কোথায় কোথায় এই error আসছে দেখা যায়, constructor-এর call অংশ বাদ যায়।
+
+Developer debugging অনেক সহজ হয়ে যায়।
