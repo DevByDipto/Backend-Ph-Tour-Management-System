@@ -7,7 +7,7 @@ interface EnvConfig{
     NODE_ENV: string
 }
 
-const loadEnvVariable=():EnvConfig=>{
+const loadEnvVariable=():EnvConfig=>{ // aikhane to ami bole e dicchi j PORT: process.env.PORT as string mane port string hobe tahole abar EnvConfig korar dorkar kii?
     const requredEnvVariables : string[] = ["PORT",'MONGO_URI',"NODE_ENV"]
 requredEnvVariables.forEach(key=>{
     if(!process.env[key]){

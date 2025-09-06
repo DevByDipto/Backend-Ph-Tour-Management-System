@@ -11,11 +11,9 @@ let server :Server;
 
 async function main() {
 
-  
 try {
     await mongoose.connect(envVars.MONGO_URI as string);
     
-
   console.log('Database connected successfully');
     server = app.listen(port, () => {
   console.log(`Library Management app listening on port ${port}`)
